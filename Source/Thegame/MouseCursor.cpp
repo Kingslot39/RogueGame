@@ -1,54 +1,42 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "MouseCursor.h"
-AMouseCursor::AMouseCursor()
+#include "GameFramework/Pawn.h"
+
+AMouseCursorController::AMouseCursorController()
 {
-	bShowMouseCursor = true;
-	bEnableClickEvents = true;
-	bEnableMouseOverEvents = true;
+	bShowMouseCursor = false;  // Hide the cursor by default
+	bEnableClickEvents = false;
+	bEnableMouseOverEvents = false;
 }
 
-void AMouseCursor::BeginPlay()
+void AMouseCursorController::BeginPlay()
 {
-	
 	Super::BeginPlay();
-    
-	// set up the cursor widget
-	
+	//Ensure MouseMode.
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+}
+void AMouseCursorController::PlayerTick(float DeltaTime)
+{
+	Super::PlayerTick(DeltaTime);
+	RotateToMouseCursor();
 }
 
-void AMouseCursor::SetupInputComponent()
+void AMouseCursorController::RotateToMouseCursor()
 {
-	Super::SetupInputComponent();
+	FHitResult Hit;
+	GetHitResultUnderCursor(ECC_Visibility, false, Hit); // Visibility channel.
 
-	InputComponent->BindAxis("MouseX",this, &AMouseCursor::OnMouseX);
-	InputComponent->BindAxis("MouseY", this, &AMouseCursor::OnMouseY);
-}
-
-void AMouseCursor::OnMouseX(float AxisValue)
-{
-	if(AxisValue!= 0)
+	if (Hit.bBlockingHit)
 	{
-		FRotator NewRotator = GetControlRotation();
+		APawn* ControlledPawn = GetPawn();
+		if (ControlledPawn)
+		{
+			FVector WorldDirection = (Hit.ImpactPoint - ControlledPawn->GetActorLocation()).GetSafeNormal();
+			FRotator NewRotation = WorldDirection.Rotation();
+			NewRotation.Pitch = 0.0f;  // Keep horizontal
+			NewRotation.Roll = 0.0f;
 
-		NewRotator.Yaw += AxisValue * 0.3;//MouseSensitivity;
-
-		SetControlRotation(NewRotator);
+			ControlledPawn->SetActorRotation(NewRotation);
+		}
 	}
 }
-
-void AMouseCursor::OnMouseY(float AxisValue)
-{
-	if(AxisValue!= 0)
-	{
-		FRotator NewRotator = GetControlRotation();
-
-		NewRotator.Pitch += AxisValue * 1;//MouseSensitivity;
-
-		NewRotator.Pitch = FMath::Clamp(NewRotator.Pitch, -80, 80);
-
-		SetControlRotation(NewRotator);
-	}
-}
-

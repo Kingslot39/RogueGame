@@ -1,36 +1,22 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ThegameCharacter.h"
 #include "GameFramework/PlayerController.h"
-#include "Blueprint/UserWidget.h"
 #include "MouseCursor.generated.h"
 
-/**
- * 
- */
+class MouseCursor;
 UCLASS()
-class THEGAME_API AMouseCursor : public APlayerController
+class THEGAME_API AMouseCursorController : public APlayerController
 {
 	GENERATED_BODY()
 
+public:
+	AMouseCursorController();
+
 protected:
 	virtual void BeginPlay() override;
-public:
-	AMouseCursor();
-	virtual  void SetupInputComponent() override;
+	virtual void PlayerTick(float DeltaTime) override;
 
-	void OnMouseX(float AxisValue);
-	void OnMouseY(float AxisValue);
-
-
-
-	
-	
-	
-	
-	
+private:
+	void RotateToMouseCursor();
 };
-

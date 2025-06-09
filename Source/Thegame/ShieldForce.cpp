@@ -3,9 +3,9 @@
 
 #include "ShieldForce.h"
 #include "Enemy.h"
-#include "MovieSceneSequenceID.h"
+
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Kismet/GameplayStatics.h"
+
 
 
 // Sets default values

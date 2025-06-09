@@ -6,8 +6,6 @@
 #include "BrainComponent.h"
 #include "EnemyBTController.h"
 #include "EnemyHealthWidget.h"
-#include "Engine.h"
-#include "LevelTrigger.h"
 #include "ThegameGameMode.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -24,10 +22,15 @@ AEnemy::AEnemy()
 	HealthWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
 	HealthWidgetComponent->SetDrawSize(FVector2D(150, 50));
 
-	
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 
 
 }
+
+ void AEnemy::DotDamage(float Damage)
+ {
+	UGameplayStatics::ApplyDamage(this, Damage, nullptr, this, nullptr);
+ }
 
 // Called when the game starts or when spawned
 void AEnemy::BeginPlay()
@@ -115,9 +118,23 @@ void AEnemy::StopRagdoll()
 
 }
 
+float AEnemy::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	// Call parent implementation first
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+    
+	// Debug log to track damage application
+	UE_LOG(LogTemp, Warning, TEXT("Enemy::TakeDamage called - Amount: %.1f from %s"), 
+		   ActualDamage, *GetNameSafe(DamageCauser));
+    
+	// Call your existing damage function
+	GetDamage(ActualDamage);
+    
+	return ActualDamage;
+}
 
 
-void AEnemy::GetDamage(float DamageAmount)
+ void AEnemy::GetDamage(float DamageAmount)
 {
 	CurrentHealth -= DamageAmount;
 	float HealthPercentage = CurrentHealth / MaxHealth;
@@ -131,7 +148,7 @@ void AEnemy::GetDamage(float DamageAmount)
 		}
 	}
 
-	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::FromInt(CurrentHealth));
+	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("Current Health: %f"), CurrentHealth));
 	UE_LOG(LogTemp, Warning, TEXT("Enemy took damage. Current Health: %f"), CurrentHealth);
 
 	if (CurrentHealth <= 0.0f)
@@ -147,7 +164,44 @@ void AEnemy::GetDamage(float DamageAmount)
 			UE_LOG(LogTemp, Error, TEXT("GameMode is not of type AThegameGameMode!"));
 		}
 
+		// Now destroy the actor
 		Destroy();
 	}
+	else{
+		//Apply damage as intended
+		if(GetCharacterMovement())
+		{
+			// Apply damage as intended
+			FVector ImpactDirection = GetActorLocation() - Player->GetActorLocation();
+			ImpactDirection.Normalize();
+			LaunchCharacter(-ImpactDirection * 500.0f, true, true);
+		}
+	}
+}
+
+
+void AEnemy::ApplySlowSpeed(float Duration, float SlowPercentage)
+{
+	if(GetCharacterMovement())
+	{
+		OriginalSpeed = GetCharacterMovement()->MaxWalkSpeed;
+		GetCharacterMovement()->MaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed * SlowPercentage;
+		GetWorldTimerManager().SetTimer (ResetSpeedTimerHandle, this, &AEnemy::ResetSpeed, Duration, false);
+	}
+}
+
+void AEnemy::ResetSpeed()
+{
+	if(GetCharacterMovement())
+	{
+		GetCharacterMovement()->MaxWalkSpeed = OriginalSpeed;
+	}
+}
+
+
+void AEnemy::RemoveSlowEnemy()
+{
+	GetWorldTimerManager().ClearTimer(ResetSpeedTimerHandle);
+	ResetSpeed();
 }
 

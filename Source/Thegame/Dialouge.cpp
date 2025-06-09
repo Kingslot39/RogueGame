@@ -22,10 +22,17 @@ void UDialouge::SetOwningNPC(ANPC* NewNPC)
 void UDialouge::NativeConstruct()
 {
 	Super::NativeConstruct();
-	NextButton->OnClicked.AddDynamic(this, &UDialouge::OnNextClicked);
+	if (NextButton)
+	{
+		NextButton->OnClicked.Clear();
+		NextButton->OnClicked.AddDynamic(this, &UDialouge::OnNextClicked);
+	}
 }
 	
 void UDialouge::OnNextClicked()
 {
-	OwningNPC->AdvanceDialogue();
+	if (OwningNPC)
+	{
+		OwningNPC->AdvanceDialogue();
+	}
 }

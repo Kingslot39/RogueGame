@@ -10,6 +10,6 @@ public class ThegameTarget : TargetRules
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_4;
-		ExtraModuleNames.Add("Thegame");
+		ExtraModuleNames.Add($"Thegame");
 	}
 }

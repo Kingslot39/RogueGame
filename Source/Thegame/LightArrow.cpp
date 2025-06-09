@@ -2,9 +2,8 @@
 
 
 #include "LightArrow.h"
-#include "NiagaraComponent.h"
+
 #include "Enemy.h"
-#include "NavigationSystemTypes.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 
 // Sets default values

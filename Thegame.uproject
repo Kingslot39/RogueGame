@@ -12,7 +12,8 @@
 				"Engine",
 				"UMG",
 				"AIModule",
-				"UMGEditor"
+				"StructUtilsEngine",
+				"CoreUObject"
 			]
 		}
 	],
@@ -26,6 +27,22 @@
 		},
 		{
 			"Name": "Water",
+			"Enabled": true
+		},
+		{
+			"Name": "UIFramework",
+			"Enabled": true
+		},
+		{
+			"Name": "ChaosClothAsset",
+			"Enabled": true
+		},
+		{
+			"Name": "ChaosClothAssetEditor",
+			"Enabled": true
+		},
+		{
+			"Name": "SLoveStory",
 			"Enabled": true
 		}
 	]

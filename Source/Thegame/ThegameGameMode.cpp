@@ -1,17 +1,20 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "ThegameGameMode.h"
+
+
 #include "UBuffSelectionWidget.h"
-#include "MouseCursor.h"
-#include "ThegameCharacter.h"
+#include "MyGameInstance.h"
+
 #include "UObject/ConstructorHelpers.h"
 #include "Blueprint/UserWidget.h"
-
+#include "Kismet/GameplayStatics.h"
 
 AThegameGameMode::AThegameGameMode()
 {
-
-	PlayerControllerClass = AMouseCursor::StaticClass();
+	// Use the default PlayerController instead of AMouseCursorController
+	// PlayerControllerClass = AMouseCursorController::StaticClass();
+	
 	// set default pawn class to our Blueprinted character
 	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
 	if (PlayerPawnBPClass.Class != NULL)
@@ -19,38 +22,66 @@ AThegameGameMode::AThegameGameMode()
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
 	EnemyKillCount = 0;
-	KillsRequiredForBuff = 10;
-	
+	KillsRequiredForBuff = 5;
 }
+
 void AThegameGameMode::HandleEnemyDeath()
 {
 	EnemyKillCount++;
-    
-	// Log the current kill count
-	UE_LOG(LogTemp, Warning, TEXT("EnemyKillCount: %d"), EnemyKillCount);
-
 	if (EnemyKillCount >= KillsRequiredForBuff)
 	{
-		EnemyKillCount = 0;  // Reset the count
-		UE_LOG(LogTemp, Warning, TEXT("Buff Popup!"));  // Debug log to confirm it reaches the required kill count
-
-		ShowBuffSelection();  // This function is implemented in Blueprint
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Kills needed for Buff: %d"), KillsRequiredForBuff - EnemyKillCount);
+		UE_LOG(LogTemp, Display, TEXT("Reached kill threshold! Opening buff selection"));
+        
+		// Show buff selection UI
+		ShowBuffSelection();
+        
+		// Reset kill counter
+		EnemyKillCount = 0;
 	}
 }
 
 void AThegameGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+	// Get a reference to the custom GameInstance once.
+	UMyGameInstance* GI = Cast<UMyGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (GI)
+	{
+		// Reset stage clear flag
+		GI->bStageClear = false;
+		UE_LOG(LogTemp, Log, TEXT("GameMode BeginPlay: Reset bStageClear to false"));
+	}
 
-	GetWorld()->GetFirstPlayerController()->SetInputMode(FInputModeGameOnly());
-    GetWorld()->GetFirstPlayerController()->SetShowMouseCursor(true);
+	// Set input mode and show mouse cursor
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (PC)
+	{
+		// Use GameAndUI mode to allow both WASD control and mouse cursor
+		FInputModeGameAndUI InputMode;
+		InputMode.SetHideCursorDuringCapture(false);
+		PC->SetInputMode(InputMode);
+		PC->SetShowMouseCursor(true);
+	}
 
-
+	// Reposition player if needed
+	if (GI && GI->bShouldApplySavedTransform)
+	{
+		if (PC)
+		{
+			APawn* Pawn = PC->GetPawn();
+			if (Pawn)
+			{
+				Pawn->SetActorTransform(GI->SavedPlayerTransform);
+				UE_LOG(LogTemp, Log, TEXT("Player repositioned after level load to: %s"),
+					*GI->SavedPlayerTransform.GetLocation().ToString());
+                
+				// Reset the flag so this only happens once
+				GI->bShouldApplySavedTransform = false;
+			}
+		}
+	}
 }
+
 void AThegameGameMode::ShowBuffSelection()
 {	
 	if (BuffSelectionWidgetClass)

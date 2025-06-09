@@ -2,6 +2,8 @@
 
 
 #include "EnemySpawner.h"
+
+#include "MyGameInstance.h"
 #include "TeleportGate.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -28,59 +30,59 @@ AEnemySpawner::AEnemySpawner()
 
 void AEnemySpawner::SpawnEnemy()
 {
+	// Do not spawn if we've reached the maximum allowed spawns.
+	if (SpawnCount >= MaxEnemySpawn)
+	{
+		return;
+	}
+
 	TArray<AActor*> Enemies;
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), EnemyClass, Enemies);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), EnemyClass, Enemies);
 
-    if (EnemyClass && Enemies.Num() < MaxEnemies)
-    {
-        const int32 MaxAttempts = 10; // Maximum number of attempts to find a valid spawn location
-        bool bSpawned = false;
+	// Check concurrent limit (e.g., maximum 5 enemies at a time)
+	if (EnemyClass && Enemies.Num() < MaxEnemies)
+	{
+		const int32 MaxAttempts = 10;
+		bool bSpawned = false;
 
-        for (int32 Attempt = 0; Attempt < MaxAttempts; Attempt++)
-        {
-            // Generate a random spawn location within the spawn area
-            FVector Origin = SpawnArea->Bounds.Origin;
-            FVector Extent = SpawnArea->Bounds.BoxExtent;
-            FVector SpawnLocation = UKismetMathLibrary::RandomPointInBoundingBox(Origin, Extent);
+		for (int32 Attempt = 0; Attempt < MaxAttempts; Attempt++)
+		{
+			FVector Origin = SpawnArea->Bounds.Origin;
+			FVector Extent = SpawnArea->Bounds.BoxExtent;
+			FVector SpawnLocation = UKismetMathLibrary::RandomPointInBoundingBox(Origin, Extent);
+			FRotator SpawnRotation = GetActorRotation();
 
-            FRotator SpawnRotation = GetActorRotation();
+			FCollisionQueryParams QueryParams;
+			QueryParams.bTraceComplex = true;
+			QueryParams.bReturnPhysicalMaterial = false;
+			QueryParams.AddIgnoredActor(this);
 
-            // Define collision parameters
-            FCollisionQueryParams QueryParams;
-            QueryParams.bTraceComplex = true;
-            QueryParams.bReturnPhysicalMaterial = false;
-            QueryParams.AddIgnoredActor(this);
+			FCollisionShape CollisionShape = FCollisionShape::MakeSphere(EnemyCollisionRadius);
 
-            // Define the collision shape based on the enemy's collision bounds
-            FCollisionShape CollisionShape = FCollisionShape::MakeSphere(EnemyCollisionRadius);
+			bool bOverlap = GetWorld()->OverlapAnyTestByChannel(
+				SpawnLocation,
+				FQuat::Identity,
+				ECollisionChannel::ECC_Pawn,
+				CollisionShape,
+				QueryParams
+			);
 
-            // Check for collisions at the spawn location
-            bool bOverlap = GetWorld()->OverlapAnyTestByChannel(
-                SpawnLocation,
-                FQuat::Identity,
-                ECollisionChannel::ECC_Pawn, // Use the appropriate collision channel
-                CollisionShape,
-                QueryParams
-            );
+			if (!bOverlap)
+			{
+				FActorSpawnParameters SpawnParams;
+				SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				GetWorld()->SpawnActor(EnemyClass, &SpawnLocation, &SpawnRotation, SpawnParams);
+				SpawnCount++;  // Increase total spawned count.
+				bSpawned = true;
+				break;
+			}
+		}
 
-            if (!bOverlap)
-            {
-                // The location is clear; proceed to spawn the enemy
-                FActorSpawnParameters SpawnParams;
-                SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-                GetWorld()->SpawnActor(EnemyClass, &SpawnLocation, &SpawnRotation, SpawnParams);
-                SpawnCount++;
-                bSpawned = true;
-                break; // Exit the loop since we've successfully spawned an enemy
-            }
-        }
-
-        if (!bSpawned)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("Could not find a suitable spawn location for an enemy after %d attempts."), MaxAttempts);
-        }
-    }
+		if (!bSpawned)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Could not find a suitable spawn location after %d attempts."), MaxAttempts);
+		}
+	}
 }
 void AEnemySpawner::OpenLevelTrigger()
 {
@@ -105,23 +107,14 @@ void AEnemySpawner::OpenLevelTrigger()
 void AEnemySpawner::BeginPlay()
 {
 	Super::BeginPlay();
+    
 	GetWorld()->GetTimerManager().SetTimer(SpawnTimerHandle, this, &AEnemySpawner::SpawnEnemy, SpawnFrequency, true);
-	
-
-	
 }
 
 // Called every frame
 void AEnemySpawner::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if(SpawnCount >= MaxEnemySpawn)
-	{
-		OpenLevelTrigger();
-		Destroy();
-	}
-
 	
-
 }
 

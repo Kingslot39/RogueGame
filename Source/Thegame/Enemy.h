@@ -34,7 +34,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health", BlueprintCallable)
 	void GetDamage(float DamageAmount);
 	
-
+	//Slow Stuff
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void ApplySlowSpeed(float Duration,float SlowPercentage);
+	void RemoveSlowEnemy();
+	UFUNCTION()
+	void ResetSpeed();
+	FTimerHandle ResetSpeedTimerHandle;
+	float OriginalSpeed;
+	
+	// Dot damage
+	UFUNCTION(BlueprintCallable)
+	void DotDamage(float Damage);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -60,6 +71,7 @@ public:
 	TSubclassOf<UUserWidget> EnemyHealthWidgetBPClass;
 	UPROPERTY(EditAnywhere, Category = "UI")
 	UWidgetComponent* HealthWidgetComponent;
-
+	// Add to Enemy.h in public section:
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 };

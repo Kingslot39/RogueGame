@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Border.h"
+
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "InGameUI.generated.h"
@@ -13,6 +13,7 @@
  * 
  */
 class AThegameCharacter;
+class UUBuffSelectionWidget;
 UCLASS()
 class THEGAME_API UInGameUI : public UUserWidget
 {
@@ -25,22 +26,42 @@ public:
 	UTextBlock* CurrentHealthText;
 	UPROPERTY(meta=(BindWidget))
 	UTextBlock* MaxHealthText;
-	//Skill1
-	UPROPERTY(meta = (BindWidget))
-    UTextBlock* Skill1CooldownText;
+	// Skill 1 UI
 	UPROPERTY(meta = (BindWidget))
 	UProgressBar* Skill1CooldownBar;
-	// Skill2
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* Skill1CooldownText;
+
+	// Skill 2 UI
 	UPROPERTY(meta = (BindWidget))
 	UProgressBar* Skill2CooldownBar;
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* Skill2CooldownText;
-	void UpdateSkill2Cooldown(float ProgressValue, UProgressBar* Skill2CooldownBar);
+
+	// Skill Combine Ui
+	UPROPERTY(meta = (BindWidget))
+	UProgressBar* SkillCombineCooldownBar;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* SkillCombineCooldownText;
+	
 	UPROPERTY()
 	AThegameCharacter* Player;
+
+	void UpdateSkillValues(float Skill1Progress, float Skill2Progress, float SkillCombineProgress);
 	void UpdateValues();
-	void UpdateSkillCooldown(float ProgressValue, UProgressBar* SkillCooldownBar);
-	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
-	void OnPlayerDeath();
+
+	//SetupRewind
+	// Skill SetupRewind UI
+	UPROPERTY(meta = (BindWidget))
+	UProgressBar* SetupRewindCooldownBar;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* SetupRewindCooldownText;
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void SetSetupRewindText(FString NewText);
+
+	
 };

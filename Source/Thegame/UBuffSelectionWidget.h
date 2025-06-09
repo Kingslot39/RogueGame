@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Button.h"
+#include "Components/Image.h"
 #include "UBuffSelectionWidget.generated.h"
 /**
  * 
@@ -48,4 +49,14 @@ public:
 	void UpdateBuffButtonText(UButton* BuffButton, int32 BuffIndex);
 	// Add SelectedBuffIndices to store the shuffled buff indices
 	TArray<int32> SelectedBuffIndices;
+	//ReRollButton
+	UPROPERTY(meta = (BindWidget))
+	class UButton* RerollButton;
+	UFUNCTION()
+	void OnRerollClicked();
+	void UpdateRerollButtonVisibility();
+	UPROPERTY(meta = (BindWidget))
+	UImage* BlockingImage;
+	UFUNCTION(BlueprintCallable)
+	void OnFadeAnimationCompleted();
 };

@@ -51,7 +51,8 @@ public:
 	UPROPERTY(EditAnywhere)
 	int MaxEnemySpawn = 20;
 
-	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Spawner")
+	bool bWaveCleared = false;
 
 
 

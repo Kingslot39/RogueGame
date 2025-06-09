@@ -3,15 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "WidgetBlueprint.h"
+#include "Blueprint/UserWidget.h"
 #include "MainMenuWidget.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class THEGAME_API UMainMenuWidget : public UWidgetBlueprint
+class THEGAME_API UMainMenuWidget : public UUserWidget
 {
 	GENERATED_BODY()
+public:
 	
 };

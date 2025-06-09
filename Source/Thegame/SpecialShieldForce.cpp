@@ -4,7 +4,7 @@
 #include "SpecialShieldForce.h"
 
 #include "Enemy.h"
-#include "GameFramework/CharacterMovementComponent.h"
+
 
 // Sets default values
 ASpecialShieldForce::ASpecialShieldForce()
@@ -15,30 +15,11 @@ ASpecialShieldForce::ASpecialShieldForce()
 	TrapArea->SetCollisionProfileName("Trigger");
 	RootComponent = TrapArea;
 
-	TrapArea->OnComponentBeginOverlap.AddDynamic(this, &ASpecialShieldForce::OnOverlapBegin);
+	
 
 }
 
-void ASpecialShieldForce::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-{
-	AEnemy* TrappedEnemy = Cast<AEnemy>(OtherActor);
-	if(TrappedEnemy)
-	{
-		TrappedEnemy->GetCharacterMovement()->SetMovementMode(MOVE_None);
-		GetWorld()->GetTimerManager().SetTimer(CoolDownTime, this, &ASpecialShieldForce::AreaDestroy, 5.f, false);
-	}
-}
 
-void ASpecialShieldForce::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
-{
-	AEnemy* TrappedActor = Cast<AEnemy>(OtherActor);
-	if(TrappedActor)
-	{
-		TrappedActor->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-	}
-}
 
 void ASpecialShieldForce::AreaDestroy()
 {

@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/TextBlock.h" 
+#include "Components/Button.h"    
 #include "Dialouge.generated.h"
 
 /**
@@ -14,28 +16,28 @@ class THEGAME_API UDialouge : public UUserWidget
 {
 	GENERATED_BODY()
 public:
-	// Function to update the dialogue text
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* DialogueText;
+    
+	UPROPERTY(meta = (BindWidget))
+	UButton* NextButton;
+    
+	// Base class virtual function to update dialogue text
 	UFUNCTION(BlueprintCallable, Category = "Dialogue")
-	void UpdateDialogueText(const FText& NewText);
-
-	// Function to set the owning NPC
-	void SetOwningNPC(class ANPC* NewNPC);
-protected:
-	// Reference to the Dialogue Text Block
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* DialogueText;
-
-	// Reference to the Next Button
-	UPROPERTY(meta = (BindWidget))
-	class UButton* NextButton;
-
-	// Reference to the owning NPC
+	virtual void UpdateDialogueText(const FText& NewText);
+    
+	// NPC reference - only used by base dialogue class
 	UPROPERTY()
 	class ANPC* OwningNPC;
-
+    
+	// Set the owning NPC
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	void SetOwningNPC(ANPC* NewNPC);
+    
+	// Base function for all dialogue widgets
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	virtual void OnNextClicked();
+    
+protected:
 	virtual void NativeConstruct() override;
-
-	// Function to handle Next Button click
-	UFUNCTION()
-	void OnNextClicked();
 };

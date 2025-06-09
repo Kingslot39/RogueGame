@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
-#include "NavigationSystem.h"
+
 #include "Perception/AISenseConfig_Sight.h"
 
 

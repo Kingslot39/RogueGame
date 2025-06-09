@@ -4,9 +4,9 @@
 #include "UBuffSelectionWidget.h"
 #include "ThegameCharacter.h"
 #include "InGameUI.h"
-#include "ThegameGameMode.h"
+#include "RotatingShield.h"
 #include "Components/Button.h"
-#include "GameFramework/CharacterMovementComponent.h"
+
 
 void UUBuffSelectionWidget::InitializeBuffOptions()
 {
@@ -14,12 +14,44 @@ void UUBuffSelectionWidget::InitializeBuffOptions()
 void UUBuffSelectionWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-    
+	AThegameCharacter* Player = Cast<AThegameCharacter>(GetOwningPlayerPawn());
+	if(Player)
+	{
+		if(Player->bHasReroll)
+		{
+			RerollButton->SetVisibility(ESlateVisibility::Visible);
+			RerollButton->OnClicked.AddDynamic(this, &UUBuffSelectionWidget::OnRerollClicked);
+		}
+		else
+		{
+			RerollButton->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	}
 	// Shuffle the buff options when the widget is constructed
 	ShuffleAndDisplayBuffOptions();
     
 	// Bind button events
 	BindButtonEvents();
+}
+
+void UUBuffSelectionWidget::OnFadeAnimationCompleted()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Fade Animation completed - enabling buttons"));
+    
+	// IMPORTANT: Set the blocking image to Collapsed, not just Hidden
+	if (BlockingImage) 
+	{
+		BlockingImage->SetVisibility(ESlateVisibility::Collapsed);
+	}
+    
+	// Make sure buttons are enabled
+	if (BuffButton1) BuffButton1->SetIsEnabled(true);
+	if (BuffButton2) BuffButton2->SetIsEnabled(true);
+	if (BuffButton3) BuffButton3->SetIsEnabled(true);
+	if (RerollButton && RerollButton->IsVisible()) 
+	{
+		RerollButton->SetIsEnabled(true);
+	}
 }
 void UUBuffSelectionWidget::OnBuffSelected(int32 BuffIndex)
 {
@@ -33,25 +65,22 @@ void UUBuffSelectionWidget::OnBuffSelected(int32 BuffIndex)
 		{
 		case 0:  // Increase speed buff
 			{
-				// Get the character movement component
-				UCharacterMovementComponent* CharacterMovement = Player->GetCharacterMovement();
-				if (CharacterMovement)
-				{
-					// Check if current speed is valid
-					if (CharacterMovement->MaxWalkSpeed <= 0.0f)
-					{
-						UE_LOG(LogTemp, Warning, TEXT("MaxWalkSpeed was invalid (<=0). Resetting to default value."));
-						CharacterMovement->MaxWalkSpeed = 700.0f;  // Reset to default value
-					}
-					// Store the current speed
-					float CurrentSpeed = CharacterMovement->MaxWalkSpeed;
-					// Generate a random speed increase between 100 and 300
-					float RandomSpeedIncrease = FMath::RandRange(10000.0f, 30000.0f);
-					// Update the MaxWalkSpeed
-					CharacterMovement->MaxWalkSpeed += RandomSpeedIncrease;
-					// Log the speed change for debugging
-					UE_LOG(LogTemp, Warning, TEXT("Speed increased from %f to %f"), CurrentSpeed, CharacterMovement->MaxWalkSpeed);
-				}
+				// Generate a random speed increase between 10% and 50%
+				float RandomSpeedIncrease = FMath::RandRange(0.1f, 0.5f);
+    
+				// Apply the speed increase to the player's multiplier
+				Player->SpeedMultiplier += RandomSpeedIncrease;
+    
+				// Calculate the new speed for logging
+				float NewSpeed = Player->BaseSpeed * Player->SpeedMultiplier;
+    
+				// Log the speed change
+				UE_LOG(LogTemp, Warning, TEXT("Speed increased by %.1f%%. New multiplier: %.2f, New speed: %.2f"),
+					RandomSpeedIncrease * 100.0f, Player->SpeedMultiplier, NewSpeed);
+    
+				// Give immediate feedback to the player
+				FString SpeedMessage = FString::Printf(TEXT("Speed increased by %.0f%%!"), RandomSpeedIncrease * 100.0f);
+				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, SpeedMessage);
 			}
 			break;
 			
@@ -87,8 +116,19 @@ void UUBuffSelectionWidget::OnBuffSelected(int32 BuffIndex)
 			}
 			break;
 		case 3:
-			// Buff case 3 logic (placeholder)
-				UE_LOG(LogTemp, Warning, TEXT("Buff 3 selected! No specific logic implemented yet."));
+			// Rotating Shield buff
+			{
+				Player->ActivateRotatingShield();
+				
+				// Give immediate feedback to the player
+				FString ShieldMessage = TEXT("Rotating Shield activated! Damages and stuns enemies!");
+				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Cyan, ShieldMessage);
+				
+				UE_LOG(LogTemp, Warning, TEXT("Rotating Shield buff activated!"));
+			}
+			break;
+		case 4: // Reroll buff
+			Player->bHasReroll = true;
 			break;
 
 		default:
@@ -116,9 +156,24 @@ void UUBuffSelectionWidget::OnBuffSelected(int32 BuffIndex)
 }
 void UUBuffSelectionWidget::ShuffleAndDisplayBuffOptions()
 {
-	// Create an array with buff indices (0 to 3)
-	TArray<int32> BuffIndices = {0, 1, 2, 3};
-
+	// Create an array with buff indices (0 to 2)
+	TArray<int32> BuffIndices = {0, 1, 2};
+	
+	// Get player reference safely
+	AThegameCharacter* Player = Cast<AThegameCharacter>(GetOwningPlayerPawn());
+	
+	// Add rotating shield buff only if player doesn't already have it
+	if(Player && !Player->bHasRotatingShield)
+	{
+		BuffIndices.Add(3); // Index 3 = Rotating Shield
+	}
+	
+	// Add reroll buff only if player exists AND hasn't unlocked it yet
+	if(Player && !Player->bHasReroll)
+	{
+		BuffIndices.Add(4); // Index 4 = Reroll buff
+	}
+	
 	// Shuffle the array to get a random order
 	for (int32 i = BuffIndices.Num() - 1; i > 0; i--)
 	{
@@ -206,11 +261,12 @@ void UUBuffSelectionWidget::UpdateBuffButtonText(UButton* BuffButton, int32 Buff
 		{
 			// Create a FSlateFontInfo and modify the font size to make it smaller
 			FSlateFontInfo FontInfo = ButtonText->GetFont(); // Use GetFont() instead of accessing Font directly
-			FontInfo.Size = 12;  // Adjust the size value to make the text smaller
+			FontInfo.Size = 24;  // Adjust the size value to make the text smaller
 
 			// Apply the updated font to the TextBlock
 			ButtonText->SetFont(FontInfo); // Use SetFont() instead of accessing Font directly
-
+			// Set the tooltip text to empty
+			BuffButton->SetToolTipText(FText::GetEmpty());
 			// Set the text content based on the BuffIndex
 			switch (BuffIndex)
 			{
@@ -227,13 +283,24 @@ void UUBuffSelectionWidget::UpdateBuffButtonText(UButton* BuffButton, int32 Buff
 				break;
 
 			case 3:
-				ButtonText->SetText(FText::FromString("Example Buff 3"));
+				ButtonText->SetText(FText::FromString("Rotating Shield"));
 				break;
-
+			case 4:
+				ButtonText->SetText(FText::FromString("Reroll Unlock"));
+				break;
 			default:
 				ButtonText->SetText(FText::FromString("Unknown Buff"));
 				break;
 			}
 		}
 	}
+}
+
+void UUBuffSelectionWidget::OnRerollClicked()
+{
+	ShuffleAndDisplayBuffOptions();
+}
+
+void UUBuffSelectionWidget::UpdateRerollButtonVisibility()
+{
 }
